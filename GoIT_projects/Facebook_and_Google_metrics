@@ -1,0 +1,49 @@
+ with HW4 as --for bonus task
+ (with cte2 as
+   (
+   with cte1 as 
+     (
+     select ad_date, spend, impressions, reach, clicks, leads, value,
+     facebook_campaign.campaign_name,
+     facebook_adset.adset_name 
+    from facebook_ads_basic_daily
+    left join facebook_campaign on facebook_ads_basic_daily.campaign_id = facebook_campaign.campaign_id 
+    left join facebook_adset on facebook_ads_basic_daily.adset_id = facebook_adset.adset_id
+    )
+  select *
+  from cte1
+  where ad_date is not null 
+ union
+  select ad_date, spend, impressions, reach, clicks, leads, value,campaign_name,adset_name
+  from google_ads_basic_daily
+  where ad_date is not null
+  ),
+CTE as
+    (
+  select ad_date, spend, impressions, reach, clicks, leads, value,
+SUBSTRING(url_parameters FROM 12 for 8) as media_source
+  from facebook_ads_basic_daily
+  where ad_date is not null 
+union
+  select ad_date, spend, impressions, reach, clicks, leads, value,
+SUBSTRING(url_parameters FROM 12 for 6) as media_source
+  from google_ads_basic_daily
+  where ad_date is not null
+  )
+select cte2.ad_date,cte2.campaign_name, cte2.adset_name, CTE.media_source,
+    sum(cte2.spend) as total_spend,
+    sum(cte2.impressions) as total_impressions,
+    sum(cte2.clicks) as total_clicks,
+    sum(cte2.value) as total_value
+from cte2
+left join CTE on CTE.ad_date=cte2.ad_date
+where 
+    cte2.clicks >0  and cte2.impressions >0
+group by cte2.ad_date,cte2.campaign_name, cte2.adset_name, CTE.media_source
+)
+--BONUS task:
+select adset_name, round( (cast(total_value as float)-cast(total_spend as float))/total_spend*100) as ROMI
+from HW4
+where total_spend>500000
+order by ROMI desc 
+limit 1
